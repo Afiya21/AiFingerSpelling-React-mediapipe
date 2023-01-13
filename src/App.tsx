@@ -1,45 +1,48 @@
-import { useState, createContext, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import "./App.css";
 import Loading from "./components/Loading";
 import { FingerPoseEstimator } from "./FingerUtils/FingerPostEstimator";
-let a = 1;
+import { HandAnalyzer } from "./HandUtils/HandAnalyzer";
+import reactToDOMCursor from "./HandUtils/temp";
+const alphabet = [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i",
+  "j",
+  "k",
+  "l",
+  "m",
+  "n",
+  "o",
+  "p",
+  "q",
+  "r",
+  "s",
+  "t",
+  "u",
+  "v",
+  "w",
+  "x",
+  "y",
+  "z",
+];
+const handAnalyzer = new HandAnalyzer();
+
 function App() {
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const videoElement = useRef(null);
   const canvasElement = useRef<HTMLCanvasElement>(null);
   let [countPrediction, setCountPrediction] = useState(0);
-
-  const hands = useMemo(() => {
-    if (started) {
-      let hands = new window.Hands({
-        locateFile: (file) => {
-          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        },
-      });
-      hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-      });
-      hands.onResults(onResults);
-      return hands;
-    }
-  }, [started]);
-  useEffect(() => {
-    if (videoElement.current) {
-      const camera = new window.Camera(videoElement.current, {
-        onFrame: async () => {
-          await hands.send({ image: videoElement.current });
-        },
-      });
-      camera.start();
-    }
-  }, [started]);
-  canvasElement.width = window.innerWidth / 2;
-  canvasElement.height = window.innerWidth / 3;
-  function onResults(results) {
+  const [prediction, setPrediction] = useState<boolean>(false);
+  const [selectedLetter, setSelectedLetter] = useState("");
+  const onResults = (results) => {
     let canvasCtx = canvasElement?.current?.getContext("2d");
     setCountPrediction(countPrediction++);
     if (countPrediction == 1) {
@@ -76,23 +79,100 @@ function App() {
         }
         let fingerPoseEstimator = new FingerPoseEstimator(null);
         let fingerPoseResults = fingerPoseEstimator.estimate(newLandMarks);
-        drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
-          color: "#ff00ff",
-          lineWidth: 2,
-        });
-        drawLandmarks(canvasCtx, landmarks, {
-          color: "transparent",
-          lineWidth: 0,
-        });
+        // NOTE: We are only accepting hands of a certain size - to have less false positives
+        var handSize =
+          handAnalyzer.findDistanceBetweenTwoLandMarks(
+            newLandMarks[0],
+            newLandMarks[5]
+          ) * 10;
+        if (handSize > 0.7) {
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+            color: "#ff00ff",
+            lineWidth: 2,
+          });
+          drawLandmarks(canvasCtx, landmarks, {
+            color: "transparent",
+            lineWidth: 0,
+          });
+          if (selectedLetter) {
+            setPrediction(
+              5 ==
+                reactToDOMCursor(
+                  fingerPoseResults,
+                  newLandMarks,
+                  selectedLetter
+                )
+            );
+          }
+        } else {
+          setPrediction(false);
+        }
       }
+    } else {
+      setPrediction(false);
     }
     canvasCtx?.restore();
-  }
+  };
+  const cb = useCallback(
+    (results) => {
+      onResults(results);
+    },
+    [selectedLetter]
+  );
+  const hands = useMemo(() => {
+    if (started) {
+      let hands = new window.Hands({
+        locateFile: (file) => {
+          return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+        },
+      });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+      hands.onResults(onResults);
+      return hands;
+    }
+  }, [started, selectedLetter]);
+
+  useEffect(() => {
+    if (videoElement.current) {
+      const camera = new window.Camera(videoElement.current, {
+        onFrame: async () => {
+          await hands.send({ image: videoElement.current });
+        },
+      });
+      camera.start();
+    }
+  }, [started, selectedLetter]);
+  canvasElement.width = window.innerWidth / 2;
+  canvasElement.height = window.innerWidth / 3;
 
   if (started) {
     return (
       <div className="container">
         {loading && <Loading />}
+        <div style={{ marginBottom: 10 }}>
+          {alphabet.map((letter, index) => {
+            return (
+              <div style={{ display: "inline-block", margin: 5 }}>
+                <button
+                  key={index}
+                  style={{
+                    borderColor: selectedLetter == letter ? "blue" : "",
+                  }}
+                  onClick={() => {
+                    setSelectedLetter(letter);
+                  }}
+                >
+                  {letter}
+                </button>
+              </div>
+            );
+          })}
+        </div>
         <video
           style={{ display: "none" }}
           ref={videoElement}
@@ -103,6 +183,7 @@ function App() {
           style={{
             borderRadius: 10,
             width: 600,
+            border: prediction ? "5px solid green" : "",
             height: 400,
             display: loading ? "none" : "block",
           }}
