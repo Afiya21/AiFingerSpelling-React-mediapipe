@@ -4,6 +4,7 @@ import Loading from "./components/Loading";
 import { FingerPoseEstimator } from "./FingerUtils/FingerPostEstimator";
 import { HandAnalyzer } from "./HandUtils/HandAnalyzer";
 import reactToDOMCursor from "./HandUtils/temp";
+import { fourLetterWords } from "./pages/words";
 const alphabet = [
   "a",
   "b",
@@ -35,13 +36,46 @@ const alphabet = [
 const handAnalyzer = new HandAnalyzer();
 
 function App() {
+  const [whereIsWord , setWhereIsWord] = useState(0)
+  const [selectedWord , setSelectWord] = useState(fourLetterWords[whereIsWord]) ;
   const [started, setStarted] = useState(false);
+  const [wordLength , setWordLength] = useState(0);
   const [loading, setLoading] = useState<boolean>(false);
   const videoElement = useRef(null);
   const canvasElement = useRef<HTMLCanvasElement>(null);
   let [countPrediction, setCountPrediction] = useState(0);
   const [prediction, setPrediction] = useState<boolean>(false);
   const [selectedLetter, setSelectedLetter] = useState("");
+  useEffect(()=>{
+
+
+    setSelectedLetter(selectedWord[wordLength]);
+    setWordLength(wordLength+1)
+  },[])
+  useEffect(()=>{
+    if(prediction)
+    
+    {
+      alert("helo")
+      if(wordLength==selectedWord.length){
+        
+        setSelectWord(fourLetterWords[whereIsWord+1])
+        setWhereIsWord(whereIsWord + 1);
+        setSelectedLetter(selectedWord[0]);
+        setWordLength(1)
+        
+        //setSelectedLetter(selectedWord[wordLength]);
+        //setPrediction(false)
+      }else{
+        setWordLength((wordLen)=>wordLen + 1);
+        setSelectedLetter(selectedWord[wordLength]);
+        setPrediction(false);
+      }
+   
+     
+    
+    }
+  },[prediction])
   const onResults = (results) => {
     let canvasCtx = canvasElement?.current?.getContext("2d");
     setCountPrediction(countPrediction++);
@@ -95,14 +129,16 @@ function App() {
             lineWidth: 0,
           });
           if (selectedLetter) {
-            setPrediction(
-              5 ==
-                reactToDOMCursor(
-                  fingerPoseResults,
-                  newLandMarks,
-                  selectedLetter
-                )
+            let bool =   5 ==
+            reactToDOMCursor(
+              fingerPoseResults,
+              newLandMarks,
+              selectedLetter
             );
+           
+            setPrediction(
+              bool
+              );
           }
         } else {
           setPrediction(false);
@@ -113,12 +149,7 @@ function App() {
     }
     canvasCtx?.restore();
   };
-  const cb = useCallback(
-    (results) => {
-      onResults(results);
-    },
-    [selectedLetter]
-  );
+
   const hands = useMemo(() => {
     if (started) {
       let hands = new window.Hands({
@@ -154,6 +185,9 @@ function App() {
     return (
       <div className="container">
         {loading && <Loading />}
+        <h1>{selectedWord}</h1>
+        <h1>{selectedLetter}</h1>
+
         <div style={{ marginBottom: 10 }}>
           {alphabet.map((letter, index) => {
             return (
