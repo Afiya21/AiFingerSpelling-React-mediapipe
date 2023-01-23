@@ -181,14 +181,18 @@ function App() {
   canvasElement.width = window.innerWidth / 2;
   canvasElement.height = window.innerWidth / 3;
 
+ 
+
   if (started) {
     return (
       <div className="container">
-        {loading && <Loading />}
-        <h1>{selectedWord}</h1>
-        <h1>{selectedLetter}</h1>
-
-        <div style={{ marginBottom: 10 }}>
+        {loading && <Loading/>}
+       
+        {
+          !loading && <>
+           <h1>{selectedWord}</h1>
+          <h1>{selectedLetter}</h1>
+          <div style={{ marginBottom: 10 }}>
           {alphabet.map((letter, index) => {
             return (
               <div style={{ display: "inline-block", margin: 5 }}>
@@ -207,6 +211,12 @@ function App() {
             );
           })}
         </div>
+          </> 
+        }
+       
+        <div style={{
+          display :"flex" ,
+        }}>
         <video
           style={{ display: "none" }}
           ref={videoElement}
@@ -223,9 +233,14 @@ function App() {
           }}
           ref={canvasElement}
         ></canvas>
+        {
+        !loading && <img src="/Ai.png" width={600} height={400} style={{objectFit :"contain"}}/>
+        }
+        </div>
       </div>
     );
   }
+
   return (
     <div className="App">
       <h1>Welcom to finger spelling....</h1>
