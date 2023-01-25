@@ -1,4 +1,4 @@
-export let fourLetterWords: Array<string> = [
+export let fourLetterWords = [
 		'abet',
 		'abut',
 		'ache',

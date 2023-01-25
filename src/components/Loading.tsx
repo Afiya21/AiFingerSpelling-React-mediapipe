@@ -3,8 +3,8 @@ import { ScaleLoader } from "react-spinners";
 function Loading() {
   return (
     <div>
-      <ScaleLoader color={"#fff"} />
-      <p>please wait while setting up it may take a while</p>
+      <ScaleLoader color={"#000"} />
+      <p>Please Sleep While Setting Up It May Take a While</p>
     </div>
   );
 }
